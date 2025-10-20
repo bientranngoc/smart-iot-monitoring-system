@@ -32,7 +32,6 @@ readBufferCount: 512
 rtspAddress: :8554
 protocols: [tcp]
 encryption: "no"
-rtspAddress: :8554
 
 ###############################################
 # HLS settings (for web browser playback)
@@ -72,13 +71,11 @@ paths:
   # Default path - allows any stream to be published/read
   all_others:
     
-  # Main Lobby - iPhone DroidCam OBS
+  # Main Lobby - iPhone via iVCam + OBS Studio
   lobby_main:
-    source: rtsp://192.168.0.106:4747/video
-    sourceProtocol: tcp
-    sourceOnDemand: no
-    runOnInit: ffmpeg -rtsp_transport tcp -i rtsp://192.168.0.106:4747/video -c copy -f rtsp rtsp://localhost:8554/lobby_main
-    runOnInitRestart: yes
+    # OBS will PUSH stream to this path
+    # No source needed - accept incoming RTSP stream
+    runOnReady: echo "Stream lobby_main is ready"
     
   # Server Room - Reserved for second camera
   server_room:
