@@ -63,6 +63,8 @@ def run_mqtt_loop(): # Hàm sẽ chạy trong background thread
 def handle_payload(payload: str):
     # Import models trong hàm để an toàn khi Celery fork
     from monitoring.models import Device, User, Reading, ReadingClient
+    # Import Smart Building models
+    from monitoring.models import ZoneSensor, BuildingAlert, HVACControl
     # User: người dùng (MySQL)
     # Device: thiết bị IoT (MySQL)
     # Reading: dataclass cho dữ liệu sensor
@@ -160,6 +162,37 @@ def handle_payload(payload: str):
                 logging.warning("Failed to index to OpenSearch: %s", e)
     except Exception:
         logging.exception("Failed to persist reading")
+    
+    # ============ SMART BUILDING LOGIC ============
+    try:
+        # Check if this device belongs to a Smart Building zone
+        zone_sensor = ZoneSensor.objects.filter(
+            device__id=device.id,
+            is_active=True
+        ).select_related('zone').first()
+        
+        if zone_sensor:
+            logging.info("📍 Device belongs to Smart Building zone: %s", zone_sensor.zone.name)
+            
+            # Update sensor latest reading
+            if zone_sensor.sensor_type == 'TEMPERATURE':
+                zone_sensor.latest_reading = data.get('temperature')
+            elif zone_sensor.sensor_type == 'HUMIDITY':
+                zone_sensor.latest_reading = data.get('humidity')
+            
+            zone_sensor.latest_reading_time = ts
+            zone_sensor.save()
+            logging.info("✓ Updated zone sensor reading: %s = %s", 
+                        zone_sensor.sensor_type, zone_sensor.latest_reading)
+            
+            # Check thresholds and create alerts if needed
+            check_building_thresholds(zone_sensor, data.get('temperature'), data.get('humidity'))
+            
+            # Auto-control HVAC if zone has HVAC system
+            auto_control_hvac(zone_sensor.zone)
+            
+    except Exception as e:
+        logging.warning("Smart Building processing failed: %s", e)
 
 def run_kafka_consumer():
     consumer = Consumer({
@@ -222,6 +255,155 @@ def kafka_consumer_task():
 @shared_task
 def ping():
     return "ok"
+
+
+# ============ SMART BUILDING HELPER FUNCTIONS ============
+
+def check_building_thresholds(zone_sensor, temperature, humidity):
+    """Check if sensor values exceed zone thresholds and create alerts"""
+    from monitoring.models import BuildingAlert
+    
+    zone = zone_sensor.zone
+    alerts_created = []
+    
+    # Check temperature thresholds
+    if zone_sensor.sensor_type == 'TEMPERATURE' and temperature is not None:
+        if temperature < zone.temp_min:
+            alert = BuildingAlert.objects.create(
+                zone=zone,
+                alert_type='TEMPERATURE',
+                severity='WARNING',
+                title=f'🥶 Temperature Too Low',
+                message=f'{zone.name}: {temperature}°C (Min: {zone.temp_min}°C)',
+                sensor_value=temperature,
+                sensor_type='TEMPERATURE'
+            )
+            alerts_created.append(alert)
+            logging.warning("⚠️  ALERT: Temperature too low in %s: %s°C", zone.name, temperature)
+            
+        elif temperature > zone.temp_max:
+            severity = 'CRITICAL' if temperature > zone.temp_max + 3 else 'WARNING'
+            alert = BuildingAlert.objects.create(
+                zone=zone,
+                alert_type='TEMPERATURE',
+                severity=severity,
+                title=f'🔥 Temperature Too High',
+                message=f'{zone.name}: {temperature}°C (Max: {zone.temp_max}°C)',
+                sensor_value=temperature,
+                sensor_type='TEMPERATURE'
+            )
+            alerts_created.append(alert)
+            logging.warning("⚠️  ALERT: Temperature too high in %s: %s°C", zone.name, temperature)
+    
+    # Check humidity thresholds
+    if zone_sensor.sensor_type == 'HUMIDITY' and humidity is not None:
+        if humidity < zone.humidity_min or humidity > zone.humidity_max:
+            alert = BuildingAlert.objects.create(
+                zone=zone,
+                alert_type='HUMIDITY',
+                severity='WARNING',
+                title=f'💧 Humidity Out of Range',
+                message=f'{zone.name}: {humidity}% (Range: {zone.humidity_min}-{zone.humidity_max}%)',
+                sensor_value=humidity,
+                sensor_type='HUMIDITY'
+            )
+            alerts_created.append(alert)
+            logging.warning("⚠️  ALERT: Humidity out of range in %s: %s%%", zone.name, humidity)
+    
+    # Start camera recording if alerts created
+    for alert in alerts_created:
+        trigger_camera_recording(zone, alert)
+    
+    return len(alerts_created)
+
+
+def auto_control_hvac(zone):
+    """Automatic HVAC control based on temperature"""
+    from monitoring.models import HVACControl
+    
+    try:
+        hvac = zone.hvac
+        if hvac.mode != 'AUTO':
+            logging.debug("HVAC in %s not in AUTO mode (current: %s), skipping control", 
+                         zone.name, hvac.mode)
+            return
+        
+        # Get current temperature from sensors
+        temp_sensors = zone.sensors.filter(sensor_type='TEMPERATURE', is_active=True)
+        if not temp_sensors.exists():
+            logging.debug("No temperature sensors found for %s", zone.name)
+            return
+        
+        temps = [s.latest_reading for s in temp_sensors if s.latest_reading is not None]
+        if not temps:
+            logging.debug("No temperature readings available for %s", zone.name)
+            return
+        
+        current_temp = sum(temps) / len(temps)
+        hvac.current_temperature = current_temp
+        
+        # Control logic
+        target = zone.target_temperature
+        previous_cooling = hvac.is_cooling
+        previous_heating = hvac.is_heating
+        
+        if current_temp > target + 1:
+            # Too hot - turn on cooling
+            hvac.is_cooling = True
+            hvac.is_heating = False
+            hvac.set_temperature = target
+            hvac.fan_speed = min(100, int((current_temp - target) * 20))
+            if not previous_cooling:
+                logging.info("❄️  HVAC %s: Cooling ON (Current: %.1f°C, Target: %.1f°C, Fan: %d%%)", 
+                           zone.name, current_temp, target, hvac.fan_speed)
+            
+        elif current_temp < target - 1:
+            # Too cold - turn on heating
+            hvac.is_cooling = False
+            hvac.is_heating = True
+            hvac.set_temperature = target
+            hvac.fan_speed = min(100, int((target - current_temp) * 20))
+            if not previous_heating:
+                logging.info("🔥 HVAC %s: Heating ON (Current: %.1f°C, Target: %.1f°C, Fan: %d%%)", 
+                           zone.name, current_temp, target, hvac.fan_speed)
+            
+        else:
+            # Temperature OK - standby
+            if previous_cooling or previous_heating:
+                logging.info("✓ HVAC %s: Standby (Current: %.1f°C, Target: %.1f°C)", 
+                           zone.name, current_temp, target)
+            hvac.is_cooling = False
+            hvac.is_heating = False
+            hvac.fan_speed = 30  # Low fan speed for circulation
+        
+        hvac.save()
+        
+    except HVACControl.DoesNotExist:
+        logging.debug("No HVAC system found for zone: %s", zone.name)
+    except Exception as e:
+        logging.error("HVAC control error in %s: %s", zone.name, e)
+
+
+def trigger_camera_recording(zone, alert):
+    """Trigger camera recording when alert is created"""
+    try:
+        camera = zone.cameras.filter(is_active=True).first()
+        if not camera:
+            return
+        
+        recording_path = f"/recordings/{camera.mediamtx_path}/{alert.id}_{timezone.now().strftime('%Y%m%d_%H%M%S')}.mp4"
+        
+        alert.camera = camera
+        alert.video_recording_path = recording_path
+        alert.save()
+        
+        logging.info("📹 Camera recording marked: %s -> %s", camera.name, recording_path)
+        
+    except Exception as e:
+        logging.error("Failed to trigger camera recording: %s", e)
+
+
+# ============ END SMART BUILDING FUNCTIONS ============
 
 # IoT Devices
 #     ↓ (publish JSON)

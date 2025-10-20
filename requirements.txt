@@ -1,11 +1,12 @@
 django==4.2.5  # Core Django
 djangorestframework==3.16.1  # Django REST Framework
-pymongo==4.6.3  # Để tích hợp MongoDB với Django
+django-cors-headers==4.3.0  # CORS support for frontend
+pymongo==4.6.3  # Tích hợp MongoDB với Django
 mysqlclient==2.2.0  # Driver cho MySQL
 redis==4.6.0  # Client cho Redis
 opensearch-py==2.2.0  # Client cho OpenSearch
 confluent_kafka==2.1.1  # Client cho Kafka
 paho-mqtt==1.6.1  # Client cho MQTT
-django-elasticsearch-dsl==7.4 # Để tích hợp OpenSearch/Elasticsearch với Django
-celery==5.3.4  # Để xử lý tasks async cho Kafka/MQTT
-python-dotenv==1.0.0  # Để load env variables
+django-elasticsearch-dsl==7.4 # Tích hợp OpenSearch/Elasticsearch với Django
+celery==5.3.4  # Xử lý tasks async cho Kafka/MQTT
+python-dotenv==1.0.0  # Load env variables

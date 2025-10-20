@@ -450,3 +450,315 @@ def latest_reading(request, device_id):
             return Response({"error": "No data found"}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ============ SMART BUILDING VIEWSETS ============
+
+from .models import Building, Zone, BuildingAlert, HVACControl
+from .serializers import (
+    BuildingSerializer,
+    ZoneDetailSerializer,
+    BuildingAlertSerializer,
+    HVACControlSerializer
+)
+from django.utils import timezone
+
+
+class BuildingViewSet(viewsets.ModelViewSet):
+    """ViewSet for Building management"""
+    queryset = Building.objects.all()
+    serializer_class = BuildingSerializer
+    
+    @action(detail=True, methods=['get'])
+    def overview(self, request, pk=None):
+        """Get building overview with all zones status"""
+        building = self.get_object()
+        zones = building.zones.all()
+        
+        zone_data = []
+        for zone in zones:
+            # Get average temperature
+            temp_sensors = zone.sensors.filter(sensor_type='TEMPERATURE', is_active=True)
+            temps = [s.latest_reading for s in temp_sensors if s.latest_reading is not None]
+            avg_temp = round(sum(temps) / len(temps), 1) if temps else None
+            
+            # Get average humidity
+            humid_sensors = zone.sensors.filter(sensor_type='HUMIDITY', is_active=True)
+            humids = [s.latest_reading for s in humid_sensors if s.latest_reading is not None]
+            avg_humid = round(sum(humids) / len(humids), 1) if humids else None
+            
+            zone_data.append({
+                'id': zone.id,
+                'name': zone.name,
+                'floor': zone.floor,
+                'zone_type': zone.zone_type,
+                'zone_type_display': zone.get_zone_type_display(),
+                'status': zone.current_status,
+                'temperature': avg_temp,
+                'humidity': avg_humid,
+                'target_temperature': zone.target_temperature,
+                'temp_range': [zone.temp_min, zone.temp_max],
+                'cameras': [
+                    {
+                        'id': c.id,
+                        'name': c.name,
+                        'hls_url': c.hls_url,
+                        'webrtc_url': c.webrtc_url
+                    }
+                    for c in zone.cameras.filter(is_active=True)
+                ],
+                'has_hvac': hasattr(zone, 'hvac')
+            })
+        
+        return Response({
+            'building': BuildingSerializer(building).data,
+            'zones': zone_data,
+            'total_zones': len(zone_data),
+            'active_alerts': building.active_alerts
+        })
+
+
+class ZoneViewSet(viewsets.ModelViewSet):
+    """ViewSet for Zone management"""
+    queryset = Zone.objects.all()
+    serializer_class = ZoneDetailSerializer
+    
+    @action(detail=True, methods=['get'])
+    def status(self, request, pk=None):
+        """Get real-time zone status with sensors and HVAC"""
+        zone = self.get_object()
+        
+        sensors_data = []
+        for sensor in zone.sensors.filter(is_active=True):
+            unit = ''
+            if sensor.sensor_type == 'TEMPERATURE':
+                unit = '°C'
+            elif sensor.sensor_type == 'HUMIDITY':
+                unit = '%'
+            elif sensor.sensor_type == 'CO2':
+                unit = 'ppm'
+            elif sensor.sensor_type == 'LIGHT':
+                unit = 'lux'
+            
+            sensors_data.append({
+                'id': sensor.id,
+                'type': sensor.sensor_type,
+                'type_display': sensor.get_sensor_type_display(),
+                'location': sensor.location_description,
+                'value': sensor.latest_reading,
+                'timestamp': sensor.latest_reading_time,
+                'unit': unit,
+                'device_id': sensor.device.id
+            })
+        
+        # HVAC status
+        hvac_data = None
+        if hasattr(zone, 'hvac'):
+            hvac = zone.hvac
+            hvac_data = {
+                'id': hvac.id,
+                'mode': hvac.mode,
+                'mode_display': hvac.get_mode_display(),
+                'current_temp': hvac.current_temperature,
+                'set_temp': hvac.set_temperature,
+                'is_cooling': hvac.is_cooling,
+                'is_heating': hvac.is_heating,
+                'fan_speed': hvac.fan_speed,
+                'status': 'Cooling' if hvac.is_cooling else 'Heating' if hvac.is_heating else 'Standby',
+                'last_updated': hvac.last_updated
+            }
+        
+        # Camera data
+        from .serializers import ZoneCameraSerializer
+        cameras_data = ZoneCameraSerializer(zone.cameras.filter(is_active=True), many=True).data
+        
+        return Response({
+            'zone': {
+                'id': zone.id,
+                'name': zone.name,
+                'floor': zone.floor,
+                'zone_type': zone.zone_type,
+                'zone_type_display': zone.get_zone_type_display(),
+                'status': zone.current_status,
+                'target_temperature': zone.target_temperature,
+                'temp_range': [zone.temp_min, zone.temp_max]
+            },
+            'sensors': sensors_data,
+            'hvac': hvac_data,
+            'cameras': cameras_data
+        })
+    
+    @action(detail=False, methods=['get'])
+    def by_floor(self, request):
+        """Get zones grouped by floor"""
+        building_id = request.query_params.get('building')
+        if not building_id:
+            return Response(
+                {'error': 'building parameter required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        zones = Zone.objects.filter(building_id=building_id).order_by('floor', 'name')
+        
+        # Group by floor
+        floors_data = {}
+        for zone in zones:
+            floor = zone.floor
+            if floor not in floors_data:
+                floors_data[floor] = []
+            
+            floors_data[floor].append({
+                'id': zone.id,
+                'name': zone.name,
+                'zone_type': zone.zone_type,
+                'zone_type_display': zone.get_zone_type_display(),
+                'status': zone.current_status,
+                'sensor_count': zone.sensors.filter(is_active=True).count(),
+                'camera_count': zone.cameras.filter(is_active=True).count(),
+                'has_hvac': hasattr(zone, 'hvac')
+            })
+        
+        return Response(floors_data)
+
+
+class BuildingAlertViewSet(viewsets.ModelViewSet):
+    """ViewSet for BuildingAlert management"""
+    queryset = BuildingAlert.objects.all()
+    serializer_class = BuildingAlertSerializer
+    
+    @action(detail=False, methods=['get'])
+    def active(self, request):
+        """Get active (unacknowledged) alerts"""
+        building_id = request.query_params.get('building')
+        
+        alerts = BuildingAlert.objects.filter(acknowledged=False)
+        if building_id:
+            alerts = alerts.filter(zone__building_id=building_id)
+        
+        alerts = alerts.select_related('zone', 'camera').order_by('-created_at')
+        
+        serializer = BuildingAlertSerializer(alerts, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'])
+    def acknowledge(self, request, pk=None):
+        """Acknowledge an alert"""
+        alert = self.get_object()
+        
+        # Check if user is authenticated
+        if request.user.is_authenticated:
+            alert.acknowledged_by = request.user
+        
+        alert.acknowledged = True
+        alert.acknowledged_at = timezone.now()
+        alert.save()
+        
+        return Response({
+            'status': 'acknowledged',
+            'alert_id': alert.id,
+            'acknowledged_at': alert.acknowledged_at
+        })
+    
+    @action(detail=False, methods=['get'])
+    def statistics(self, request):
+        """Alert statistics"""
+        building_id = request.query_params.get('building')
+        
+        alerts = BuildingAlert.objects.all()
+        if building_id:
+            alerts = alerts.filter(zone__building_id=building_id)
+        
+        # Last 24 hours
+        from datetime import timedelta
+        last_24h = timezone.now() - timedelta(hours=24)
+        
+        stats = {
+            'total': alerts.count(),
+            'last_24h': alerts.filter(created_at__gte=last_24h).count(),
+            'unacknowledged': alerts.filter(acknowledged=False).count(),
+            'by_severity': {
+                'EMERGENCY': alerts.filter(severity='EMERGENCY').count(),
+                'CRITICAL': alerts.filter(severity='CRITICAL').count(),
+                'WARNING': alerts.filter(severity='WARNING').count(),
+                'INFO': alerts.filter(severity='INFO').count(),
+            },
+            'by_type': {}
+        }
+        
+        # Count by alert type
+        for alert_type, _ in BuildingAlert.ALERT_TYPE_CHOICES:
+            stats['by_type'][alert_type] = alerts.filter(alert_type=alert_type).count()
+        
+        return Response(stats)
+
+
+class HVACControlViewSet(viewsets.ModelViewSet):
+    """ViewSet for HVAC Control management"""
+    queryset = HVACControl.objects.all()
+    serializer_class = HVACControlSerializer
+    
+    @action(detail=True, methods=['post'])
+    def set_mode(self, request, pk=None):
+        """Change HVAC mode"""
+        hvac = self.get_object()
+        mode = request.data.get('mode')
+        
+        if mode not in ['AUTO', 'MANUAL', 'SCHEDULE', 'OFF']:
+            return Response(
+                {'error': 'Invalid mode. Valid options: AUTO, MANUAL, SCHEDULE, OFF'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        hvac.mode = mode
+        hvac.save()
+        
+        return Response({
+            'status': 'success',
+            'hvac_id': hvac.id,
+            'zone': hvac.zone.name,
+            'mode': hvac.mode,
+            'message': f'HVAC mode changed to {mode}'
+        })
+    
+    @action(detail=True, methods=['post'])
+    def set_temperature(self, request, pk=None):
+        """Set target temperature (MANUAL mode only)"""
+        hvac = self.get_object()
+        
+        if hvac.mode != 'MANUAL':
+            return Response(
+                {'error': f'Can only set temperature in MANUAL mode (current: {hvac.mode})'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        temperature = request.data.get('temperature')
+        if not temperature:
+            return Response(
+                {'error': 'temperature parameter required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            temp_value = float(temperature)
+            if temp_value < 16 or temp_value > 32:
+                return Response(
+                    {'error': 'Temperature must be between 16°C and 32°C'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            hvac.set_temperature = temp_value
+            hvac.save()
+            
+            return Response({
+                'status': 'success',
+                'hvac_id': hvac.id,
+                'zone': hvac.zone.name,
+                'set_temperature': hvac.set_temperature,
+                'message': f'Target temperature set to {temp_value}°C'
+            })
+            
+        except ValueError:
+            return Response(
+                {'error': 'Invalid temperature value'},
+                status=status.HTTP_400_BAD_REQUEST
+            )

@@ -1,0 +1,114 @@
+# MediaMTX Configuration for Smart Building IoT System
+# https://github.com/bluenviron/mediamtx
+
+###############################################
+# General settings
+###############################################
+
+# Log level: debug, info, warn
+logLevel: info
+
+# Log destinations: stdout, file, syslog
+logDestinations: [stdout]
+
+# API server
+api: yes
+apiAddress: :9997
+
+# Metrics for Prometheus
+metrics: yes
+metricsAddress: :9998
+
+# Performance tuning
+readTimeout: 10s
+writeTimeout: 10s
+readBufferCount: 512
+
+###############################################
+# RTSP settings
+###############################################
+
+# RTSP server
+rtspAddress: :8554
+protocols: [tcp]
+encryption: "no"
+rtspAddress: :8554
+
+###############################################
+# HLS settings (for web browser playback)
+###############################################
+
+# HLS server - This allows viewing streams in web browsers
+hls: yes
+hlsAddress: :8889
+hlsAlwaysRemux: yes
+hlsVariant: lowLatency
+hlsSegmentCount: 7
+hlsSegmentDuration: 1s
+hlsPartDuration: 200ms
+hlsSegmentMaxSize: 50M
+
+###############################################
+# WebRTC settings (for real-time playback)
+###############################################
+
+# WebRTC server
+webrtc: yes
+webrtcAddress: :8890
+webrtcICEServers2: []
+
+###############################################
+# Recording settings
+###############################################
+
+# Recording path
+recordPath: /recordings/%path/%Y%m%d_%H%M%S
+
+###############################################
+# Path configurations
+###############################################
+
+paths:
+  # Default path - allows any stream to be published/read
+  all_others:
+    
+  # Main Lobby - iPhone DroidCam OBS
+  lobby_main:
+    source: rtsp://192.168.0.106:4747/video
+    sourceProtocol: tcp
+    sourceOnDemand: no
+    runOnInit: ffmpeg -rtsp_transport tcp -i rtsp://192.168.0.106:4747/video -c copy -f rtsp rtsp://localhost:8554/lobby_main
+    runOnInitRestart: yes
+    
+  # Server Room - Reserved for second camera
+  server_room:
+    # Will be configured when second camera is added
+    # source: rtsp://IP:PORT/video
+    
+  # Parking Lot - Reserved for third camera  
+  parking_lot:
+    # Will be configured when third camera is added
+    # source: rtsp://IP:PORT/video
+    
+  # Office Floor 5 - Reserved for fourth camera
+  office_floor5:
+    # Will be configured when fourth camera is added
+    # source: rtsp://IP:PORT/video
+
+###############################################
+# Notes
+###############################################
+# 
+# Path URLs after MediaMTX is running:
+# - HLS (browser): http://localhost:8889/{path}/index.m3u8
+# - WebRTC: http://localhost:8889/{path} (use web interface)
+# - RTSP: rtsp://localhost:8554/{path}
+#
+# Example for lobby_main:
+# - HLS: http://localhost:8889/lobby_main/index.m3u8
+# - View in browser: http://localhost:8889/lobby_main/
+#
+# To add more cameras:
+# 1. Update the corresponding path section with source URL
+# 2. Restart MediaMTX: docker-compose restart mediamtx
+# 3. Test: http://localhost:8889/{path}/
