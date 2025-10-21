@@ -1,70 +1,70 @@
 # 🏢 Smart IoT Monitoring System - Smart Building
 
-Hệ thống giám sát và quản lý tòa nhà thông minh với IoT, streaming camera real-time, và điều khiển HVAC tự động.
+A comprehensive smart building monitoring and management system with IoT sensors, real-time camera streaming, and automated HVAC control.
 
 ![Django](https://img.shields.io/badge/Django-4.2-green)
 ![React](https://img.shields.io/badge/React-18.2-blue)
 ![Docker](https://img.shields.io/badge/Docker-Compose-blue)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
-## 📋 Mục lục
+## 📋 Table of Contents
 
-- [Tổng quan](#-tổng-quan)
-- [Kiến trúc hệ thống](#-kiến-trúc-hệ-thống)
-- [Công nghệ sử dụng](#-công-nghệ-sử-dụng)
-- [Cài đặt](#-cài-đặt)
-- [Sử dụng](#-sử-dụng)
+- [Overview](#-overview)
+- [System Architecture](#-system-architecture)
+- [Technology Stack](#-technology-stack)
+- [Installation](#-installation)
+- [Usage](#-usage)
 - [API Documentation](#-api-documentation)
 - [Testing](#-testing)
 - [Screenshots](#-screenshots)
 
 ---
 
-## 🎯 Tổng quan
+## 🎯 Overview
 
-**Smart IoT Monitoring System** là giải pháp toàn diện cho việc giám sát và quản lý tòa nhà thông minh, bao gồm:
+**Smart IoT Monitoring System** is a comprehensive solution for smart building monitoring and management, including:
 
-### ✨ Tính năng chính
+### ✨ Key Features
 
-- 🌡️ **Giám sát Real-time**: Theo dõi nhiệt độ, độ ẩm, CO2, người vào ra
-- 📹 **Live Camera Streaming**: Xem camera trực tiếp qua HLS từ iPhone/smartphone
-- 🚨 **Alert System**: Cảnh báo tự động khi vượt ngưỡng an toàn
-- ❄️ **HVAC Control**: Điều khiển hệ thống điều hòa thông minh
-- 📊 **Dashboard**: Giao diện React hiện đại, responsive
-- 🔄 **Real-time Updates**: Auto-refresh mỗi 30 giây
-- 📈 **Data Analytics**: Lưu trữ và phân tích dữ liệu lịch sử
+- 🌡️ **Real-time Monitoring**: Track temperature, humidity, CO2 levels, occupancy
+- 📹 **Live Camera Streaming**: View live camera feeds via HLS from iPhone/smartphone
+- 🚨 **Alert System**: Automatic alerts when safety thresholds are exceeded
+- ❄️ **HVAC Control**: Smart climate control system automation
+- 📊 **Dashboard**: Modern, responsive React interface
+- 🔄 **Real-time Updates**: Auto-refresh every 30 seconds
+- 📈 **Data Analytics**: Historical data storage and analysis
 
-### 🏗️ Cấu trúc tòa nhà mẫu (ABC Office Tower)
+### 🏗️ Sample Building Structure (FPT Telecom)
 
-- **Main Lobby** (Tầng 1): Giám sát ra vào, nhiệt độ môi trường
-- **Server Room** (Tầng 1): Kiểm soát nhiệt độ nghiêm ngặt (18-22°C)
-- **Parking Lot** (Tầng 0): Giám sát an ninh và môi trường
-- **Office Floor 5** (Tầng 5): Tối ưu điều kiện làm việc
+- **Main Lobby** (Floor 1): Entry monitoring, environmental tracking
+- **Server Room** (Floor 1): Strict temperature control (18-22°C)
+- **Parking Lot** (Floor 0): Security and environmental monitoring
+- **Office** (Floor 1): Optimal working conditions
 
 ---
 
-## 🏛️ Kiến trúc hệ thống
+## 🏛️ System Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                         PRESENTATION LAYER                       │
-│  ┌─────────────────┐         ┌──────────────────┐              │
-│  │  React Dashboard│◄────────┤  Live Camera HLS │              │
-│  │  (Port 3001)    │         │  (MediaMTX:8889) │              │
-│  └────────┬────────┘         └──────────────────┘              │
-└───────────┼──────────────────────────────────────────────────────┘
+│                         PRESENTATION LAYER                      │
+│  ┌─────────────────┐         ┌──────────────────┐               │
+│  │  React Dashboard│◄────────┤  Live Camera HLS │               │
+│  │  (Port 3001)    │         │  (MediaMTX:8889) │               │
+│  └────────┬────────┘         └──────────────────┘               │
+└───────────┼─────────────────────────────────────────────────────┘
             │
             │ REST API (Port 8000)
             ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                        APPLICATION LAYER                         │
-│  ┌──────────────────────────────────────────────────────────┐  │
+│                        APPLICATION LAYER                        │
+│  ┌───────────────────────────────────────────────────────────┐  │
 │  │           Django REST Framework + Celery                  │  │
-│  │  • BuildingViewSet    • ZoneViewSet                       │  │
-│  │  • SensorViewSet      • AlertViewSet                      │  │
-│  │  • HVACControlViewSet • CameraViewSet                     │  │
+│  │         • BuildingViewSet    • ZoneViewSet                │  │
+│  │         • SensorViewSet      • AlertViewSet               │  │
+│  │         • HVACControlViewSet • CameraViewSet              │  │
 │  └────────────────┬──────────────────────────────────────────┘  │
-└───────────────────┼──────────────────────────────────────────────┘
+└───────────────────┼─────────────────────────────────────────────┘
                     │
         ┌───────────┴───────────┐
         │                       │
@@ -74,22 +74,22 @@ Hệ thống giám sát và quản lý tòa nhà thông minh với IoT, streamin
 │  (Mosquitto) │───────▶│  Streaming   │
 │  Port 1883   │        │  Port 9092   │
 └──────────────┘        └──────┬───────┘
-        ▲                       │
-        │                       ▼
+        ▲                      │
+        │                      ▼
 ┌──────────────┐        ┌──────────────┐
 │ IoT Sensors  │        │   Celery     │
 │ MQTT Publish │        │   Workers    │
 └──────────────┘        └──────┬───────┘
                                │
                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                          DATA LAYER                              │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐       │
-│  │  MySQL   │  │ MongoDB  │  │  Redis   │  │OpenSearch│       │
-│  │ (Relational│ │(Time-series│ │ (Cache) │  │ (Search) │       │
-│  │   Data)  │  │  Data)   │  │          │  │          │       │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘       │
-└─────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────┐
+│                          DATA LAYER                            │
+│  ┌────────────┐  ┌────────────┐  ┌──────────┐  ┌──────────┐    │
+│  │  MySQL     │  │ MongoDB    │  │  Redis   │  │OpenSearch│    │
+│  │ (Relational│  │(Time-series│  │ (Cache)  │  │ (Search) │    │
+│  │   Data)    │  │  Data)     │  │          │  │          │    │
+│  └────────────┘  └────────────┘  └──────────┘  └──────────┘    │
+└────────────────────────────────────────────────────────────────┘
 ```
 
 ### 🔄 Data Flow
@@ -103,7 +103,7 @@ Hệ thống giám sát và quản lý tòa nhà thông minh với IoT, streamin
 
 ---
 
-## 🛠️ Công nghệ sử dụng
+## 🛠️ Technology Stack
 
 ### Backend
 - **Django 4.2.7** - Web framework
@@ -135,16 +135,16 @@ Hệ thống giám sát và quản lý tòa nhà thông minh với IoT, streamin
 
 ---
 
-## 📦 Cài đặt
+## 📦 Installation
 
-### Yêu cầu hệ thống
+### System Requirements
 
 - Docker Desktop 20.x+
 - Docker Compose 2.x+
-- Node.js 18.x+ (cho frontend development)
-- Python 3.11+ (nếu chạy local)
-- iPhone/Android với iVCam app (cho camera streaming)
-- OBS Studio (cho camera streaming)
+- Node.js 18.x+ 
+- Python 3.11+
+- iPhone/Android with iVCam app
+- OBS Studio 
 
 ### 1. Clone Repository
 
@@ -153,17 +153,17 @@ git clone https://github.com/bientranngoc/smart-iot-monitoring-system.git
 cd smart-iot-monitoring-system
 ```
 
-### 2. Cấu hình Environment Variables
+### 2. Configure Environment Variables
 
 ```bash
-# Copy file .env mẫu
+# Copy example .env file
 cp .env.example .env
 
-# Chỉnh sửa các biến môi trường
+# Edit environment variables
 nano .env
 ```
 
-**Các biến quan trọng:**
+**Important variables:**
 ```env
 # Database
 MYSQL_ROOT_PASSWORD=root
@@ -180,17 +180,17 @@ REDIS_URL=redis://iot-redis:6379/0
 MEDIAMTX_PORT=8889
 ```
 
-### 3. Khởi động Backend (Docker)
+### 3. Start Backend (Docker)
 
 ```bash
-# Build và start tất cả services
+# Build and start all services
 docker-compose up -d
 
-# Kiểm tra containers đang chạy
+# Check running containers
 docker ps
 ```
 
-**Services sẽ chạy:**
+**Running services:**
 - `iot-app` (Django): http://localhost:8000
 - `iot-mysql`: Port 3306
 - `iot-mongodb`: Port 27017
@@ -201,13 +201,13 @@ docker ps
 - `iot-mediamtx`: Port 8889, 1935
 - `iot-opensearch`: Port 9200
 
-### 4. Khởi tạo Database
+### 4. Initialize Database
 
 ```bash
-# Chạy migrations
+# Run migrations
 docker exec -it iot-app python manage.py migrate
 
-# Tạo superuser
+# Create superuser
 docker exec -it iot-app python manage.py createsuperuser
 
 # Load sample data (optional)
@@ -226,29 +226,29 @@ npm install
 npm run dev
 ```
 
-Frontend sẽ chạy tại: http://localhost:3001
+Frontend will run at: http://localhost:3000
 
 ### 6. Setup Camera Streaming (Optional)
 
-#### a. Cài đặt iVCam
-1. Tải **iVCam** app trên iPhone/Android
-2. Tải **iVCam driver** trên PC: https://www.e2esoft.com/ivcam/
-3. Kết nối phone và PC cùng WiFi
-4. Mở app iVCam → Camera sẽ xuất hiện trên PC như webcam
+#### a. Install iVCam
+1. Download **iVCam** app on iPhone/Android
+2. Download **iVCam driver** on PC: https://www.e2esoft.com/ivcam/
+3. Connect phone and PC to the same WiFi
+4. Open iVCam app → Camera will appear on PC as webcam
 
 #### b. Setup OBS Studio
-1. Tải OBS Studio: https://obsproject.com/
-2. Mở OBS → Add source → **Video Capture Device**
-3. Chọn **e2eSoft iVCam** làm device
+1. Download OBS Studio: https://obsproject.com/
+2. Open OBS → Add source → **Video Capture Device**
+3. Select **e2eSoft iVCam** as device
 4. Settings → Stream:
    - Service: Custom
    - Server: `rtmp://localhost:1935/lobby_main`
-   - Stream Key: để trống
+   - Stream Key: leave empty
 5. Click **Start Streaming**
 
-#### c. Kiểm tra stream
+#### c. Verify stream
 ```bash
-# Xem logs MediaMTX
+# View MediaMTX logs
 docker logs iot-mediamtx --tail 20
 
 # Test HLS stream
@@ -259,28 +259,28 @@ Stream URL: `http://localhost:8889/lobby_main/index.m3u8`
 
 ---
 
-## 🚀 Sử dụng
+## 🚀 Usage
 
-### 1. Truy cập Dashboard
+### 1. Access Dashboard
 
-Mở trình duyệt: **http://localhost:3001**
+Open browser: **http://localhost:3000**
 
-Dashboard hiển thị:
+Dashboard displays:
 - 📊 Stats cards: Average temperature, occupancy, CO2, energy usage
-- 🏠 Zone cards: Real-time sensor data cho mỗi zone
-- 🚨 Active alerts: Danh sách cảnh báo chưa xử lý
-- 📹 Live camera: Click "Show Live Camera" để xem stream
+- 🏠 Zone cards: Real-time sensor data for each zone
+- 🚨 Active alerts: List of unacknowledged alerts
+- 📹 Live camera: Click "Show Live Camera" to view stream
 
-### 2. Test với MQTT
+### 2. Test with MQTT
 
-#### Gửi sensor data thủ công:
+#### Send sensor data manually:
 
 ```bash
-# Chạy test script (publish multiple readings)
+# Run test script (publish multiple readings)
 python scripts/test_alerts.py
 ```
 
-Test script sẽ:
+Test script will:
 - ✅ Publish normal sensor readings
 - ⚠️ Trigger high temperature alerts (>28°C)
 - 🔥 Trigger extreme temperature alerts (>32°C)
@@ -331,11 +331,11 @@ curl http://localhost:8000/api/hvac-controls/
 
 ### 4. Admin Panel
 
-Truy cập Django Admin: **http://localhost:8000/admin**
+Access Django Admin: **http://localhost:8000/admin**
 
-Login với superuser đã tạo ở bước cài đặt.
+Login with the superuser created during installation.
 
-Quản lý:
+Manage:
 - Buildings, Zones, Devices
 - Sensors, Cameras, HVAC Controls
 - Alerts, Energy Logs
@@ -348,30 +348,30 @@ Quản lý:
 ### Building Endpoints
 
 #### `GET /api/buildings/`
-Lấy danh sách tất cả buildings
+Get list of all buildings
 
 **Response:**
 ```json
 [
   {
     "id": 1,
-    "name": "ABC Office Tower",
-    "address": "123 Tech Street, Innovation District",
-    "total_floors": 20,
+    "name": "FPT Telecom",
+    "address": "No. 336-340 Huynh Tan Phat, Tan Thuan Tay Ward, District 7, HCMC",
+    "total_floors": 4,
     "total_zones": 4
   }
 ]
 ```
 
 #### `GET /api/buildings/{id}/`
-Chi tiết một building
+Get building details
 
 ---
 
 ### Zone Endpoints
 
 #### `GET /api/zones/`
-Lấy danh sách zones
+Get list of zones
 
 **Response:**
 ```json
@@ -388,7 +388,7 @@ Lấy danh sách zones
 ```
 
 #### `GET /api/zones/{id}/status/`
-Lấy trạng thái real-time của zone (bao gồm sensors, HVAC, cameras)
+Get real-time zone status (includes sensors, HVAC, cameras)
 
 **Response:**
 ```json
@@ -434,7 +434,7 @@ Lấy trạng thái real-time của zone (bao gồm sensors, HVAC, cameras)
 ### Alert Endpoints
 
 #### `GET /api/building-alerts/`
-Lấy danh sách alerts
+Get list of alerts
 
 **Query Parameters:**
 - `acknowledged` (boolean): Filter by acknowledged status
@@ -447,7 +447,7 @@ Lấy danh sách alerts
     "zone_name": "Server Room",
     "alert_type": "TEMPERATURE",
     "severity": "CRITICAL",
-    "title": "🔥 Temperature Too High",
+    "title": "Temperature Too High",
     "message": "Server Room: 30.0°C (Max: 22.0°C)",
     "sensor_value": 30.0,
     "created_at": "2025-10-21T08:00:00Z",
@@ -457,17 +457,17 @@ Lấy danh sách alerts
 ```
 
 #### `POST /api/building-alerts/{id}/acknowledge/`
-Xác nhận đã xử lý alert
+Acknowledge alert as handled
 
 ---
 
 ### HVAC Control Endpoints
 
 #### `GET /api/hvac-controls/`
-Lấy danh sách HVAC controls
+Get list of HVAC controls
 
 #### `PATCH /api/hvac-controls/{id}/`
-Cập nhật HVAC settings
+Update HVAC settings
 
 **Request Body:**
 ```json
@@ -562,42 +562,42 @@ docker exec -it iot-kafka kafka-topics --list --bootstrap-server localhost:9092
 
 ## 🔧 Troubleshooting
 
-### Dashboard không hiển thị dữ liệu
+### Dashboard not displaying data
 
-1. Kiểm tra backend đang chạy:
+1. Check if backend is running:
 ```bash
 curl http://localhost:8000/api/buildings/
 ```
 
-2. Kiểm tra CORS settings trong `settings.py`:
+2. Check CORS settings in `settings.py`:
 ```python
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3001",
 ]
 ```
 
-### Camera stream không chạy
+### Camera stream not working
 
-1. Kiểm tra MediaMTX logs:
+1. Check MediaMTX logs:
 ```bash
 docker logs iot-mediamtx --tail 20
 ```
 
-2. Kiểm tra OBS đã start streaming chưa
+2. Verify OBS has started streaming
 
-3. Test stream URL trực tiếp:
+3. Test stream URL directly:
 ```bash
 curl http://localhost:8889/lobby_main/index.m3u8
 ```
 
-### MQTT messages không được xử lý
+### MQTT messages not being processed
 
-1. Kiểm tra Celery worker:
+1. Check Celery worker:
 ```bash
 docker logs iot-celery --tail 50
 ```
 
-2. Kiểm tra Kafka đang chạy:
+2. Check if Kafka is running:
 ```bash
 docker ps | grep kafka
 ```
@@ -609,7 +609,7 @@ docker restart iot-celery
 
 ### Database connection errors
 
-1. Kiểm tra MySQL container:
+1. Check MySQL container:
 ```bash
 docker logs iot-mysql --tail 20
 ```
@@ -627,76 +627,49 @@ docker exec -it iot-app python manage.py migrate
 
 ```
 smart-iot-monitoring-system/
-├── docs/                      # Documentation files
-├── frontend/                  # React frontend
-│   ├── public/               # Static files
+├── docs/                      
+├── frontend/                  
+│   ├── public/               
 │   ├── src/
-│   │   ├── components/       # React components
+│   │   ├── components/       
 │   │   │   ├── LiveCameraView.jsx
 │   │   │   └── ZoneCard.jsx
-│   │   ├── pages/            # Page components
+│   │   ├── pages/            
 │   │   │   └── SmartBuildingDashboard.jsx
-│   │   ├── services/         # API services
+│   │   ├── services/         
 │   │   │   └── api.js
 │   │   ├── App.jsx
 │   │   └── main.jsx
 │   ├── package.json
 │   └── vite.config.js
-├── infra/                     # Infrastructure configs
+├── infra/                     
 │   └── mosquitto/
 │       └── mosquitto.conf
-├── monitoring/                # Django app - Smart Building
+├── monitoring/                
 │   ├── migrations/
-│   ├── admin.py              # Admin interface
-│   ├── models.py             # 7 models (Building, Zone, etc.)
-│   ├── serializers.py        # DRF serializers
-│   ├── views.py              # API ViewSets
-│   ├── tasks.py              # Celery tasks
-│   └── urls.py               # URL routing
-├── scripts/                   # Utility scripts
-│   ├── consumer.py           # Kafka consumer
-│   ├── mqtt_worker.py        # MQTT subscriber
-│   ├── publish.py            # MQTT publisher
-│   ├── test_alerts.py        # Alert testing
-│   └── check_status.py       # Status checker
-├── smart_iot/                 # Django project settings
+│   ├── admin.py              
+│   ├── models.py             
+│   ├── serializers.py        
+│   ├── views.py              
+│   ├── tasks.py               # Celery tasks
+│   └── urls.py               
+├── scripts/                  # Utility scripts
+│   ├── consumer.py            # Kafka consumer
+│   ├── mqtt_worker.py         # MQTT subscriber
+│   ├── publish.py             # MQTT publisher
+│   ├── test_alerts.py         # Alert testing
+│   └── check_status.py        # Status checker
+├── smart_iot/                # Django project settings
 │   ├── settings.py
 │   ├── urls.py
 │   ├── celery.py             # Celery config
 │   └── wsgi.py
-├── docker-compose.yml         # Docker services
-├── Dockerfile                 # Django app image
-├── requirements.txt           # Python dependencies
-├── manage.py                  # Django management
-└── README.md                  # This file
+├── docker-compose.yml         
+├── Dockerfile                 
+├── requirements.txt           
+├── manage.py                  
+└── README.md                  
 ```
-
----
-
-## 🔐 Security Notes
-
-### Production Deployment
-
-⚠️ **Trước khi deploy production:**
-
-1. **Đổi SECRET_KEY** trong `settings.py`
-2. **Tắt DEBUG mode**: `DEBUG = False`
-3. **Cấu hình ALLOWED_HOSTS**:
-```python
-ALLOWED_HOSTS = ['yourdomain.com', 'www.yourdomain.com']
-```
-
-4. **Update CORS_ALLOWED_ORIGINS** với domain thật
-5. **Sử dụng environment variables** cho sensitive data
-6. **Enable HTTPS** với SSL certificate
-7. **Secure database credentials**
-8. **Configure firewall rules**
-
-### Environment Variables
-
-Không commit file `.env` vào git. Sử dụng `.env.example` làm template.
-
----
 
 ## 🤝 Contributing
 
@@ -720,7 +693,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Bien Tran Ngoc**
 - GitHub: [@bientranngoc](https://github.com/bientranngoc)
-- Email: your.email@example.com
+- Email: bientran.dev@gmail.com
 
 ---
 
@@ -735,11 +708,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📮 Support
 
-Nếu gặp vấn đề hoặc có câu hỏi:
+If you encounter issues or have questions:
 
 1. 🐛 [Open an issue](https://github.com/bientranngoc/smart-iot-monitoring-system/issues)
 2. 💬 [Discussions](https://github.com/bientranngoc/smart-iot-monitoring-system/discussions)
-3. 📧 Email: your.email@example.com
+3. 📧 Email: bientran.dev@gmail.com
 
 ---
 
