@@ -9,3 +9,18 @@
 # Python cache
 __pycache__/
 *.pyc
+
+# Logs
+logs/
+*.log
+
+# Backups
+*.backup
+
+# Static and Media files
+staticfiles/
+media/
+
+# Database
+*.sqlite3
+db.sqlite3

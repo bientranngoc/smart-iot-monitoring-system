@@ -2,7 +2,7 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Cài dependency hệ thống (cho mysqlclient, confluent-kafka...)
+# Cài dependency hệ thống
 RUN apt-get update && apt-get install -y \
     gcc \
     default-libmysqlclient-dev \
