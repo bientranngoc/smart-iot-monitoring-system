@@ -71,7 +71,7 @@ A comprehensive smart building monitoring and management system with IoT sensors
         ▼                      ▼
 ┌──────────────┐         ┌──────────────┐
 │  MQTT Broker │         │    Kafka     │
-│  (Mosquitto) │───────▶ │  Streaming   │
+│  (Mosquitto) │──────▶ │  Streaming   │
 │  Port 1883   │         │  Port 9092   │
 └──────────────┘         └─────┬────────┘
         ▲                      │
