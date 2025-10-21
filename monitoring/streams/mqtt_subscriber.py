@@ -1,13 +1,39 @@
-import paho.mqtt.client as mqtt
-from monitoring.tasks import on_message, MQTT_BROKER, MQTT_PORT, MQTT_TOPIC # Tách cấu hình và logic xử lý message ra một module riêng
+"""
+MQTT subscriber - Receives sensor data from MQTT broker
+"""
 
-def run(): # Khởi tạo MQTT client và chạy vòng lặp subscribe
+import logging
+import paho.mqtt.client as mqtt
+
+logger = logging.getLogger(__name__)
+
+# Config
+MQTT_BROKER = 'iot-mosquitto'
+MQTT_PORT = 1883
+MQTT_TOPIC = 'sensors/data'
+
+
+def run_mqtt_loop():
+    """
+    Run MQTT subscriber loop (blocking)
+    
+    This function will run in a background thread.
+    Connects to MQTT broker and subscribes to sensor data topic.
+    """
+    from .handlers import on_mqtt_message
+    
     client = mqtt.Client()
-    client.on_message = on_message
-    client.connect(MQTT_BROKER, MQTT_PORT, 60) # Kết nối tới MQTT broker ở host MQTT_BROKER và cổng MQTT_PORT với keepalive = 60 giây
-    client.subscribe(MQTT_TOPIC) # Đăng ký subscribe tới topic MQTT_TOPIC
-    print("MQTT Subscriber running...")
-    client.loop_forever() # Bắt đầu vòng lặp mạng chính — blocking call — sẽ xử lý I/O, gọi callback (on_connect, on_message, etc.) và giữ kết nối sống
+    client.on_message = on_mqtt_message
+    client.connect(MQTT_BROKER, MQTT_PORT, 60)
+    client.subscribe(MQTT_TOPIC)
+    
+    logger.info("MQTT Subscriber connected to %s:%d, topic: %s", 
+                MQTT_BROKER, MQTT_PORT, MQTT_TOPIC)
+    
+    # Blocking call - processes network I/O, calls callbacks
+    client.loop_forever()
+
 
 if __name__ == "__main__":
-    run()
+    logging.basicConfig(level=logging.INFO)
+    run_mqtt_loop()

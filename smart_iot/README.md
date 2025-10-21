@@ -518,7 +518,7 @@ See main [LICENSE](../LICENSE) file for details.
 
 ---
 
-**Maintained by:** Smart IoT Development Team  
+**Maintained by:** Bien Tran Ngoc  
 **Last Updated:** October 2025  
 **Django Version:** 4.2.7  
 **Python Version:** 3.11+
