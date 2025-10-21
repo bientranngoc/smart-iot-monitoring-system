@@ -26,13 +26,13 @@ A comprehensive smart building monitoring and management system with IoT sensors
 
 ### ✨ Key Features
 
-- 🌡️ **Real-time Monitoring**: Track temperature, humidity, CO2 levels, occupancy
-- 📹 **Live Camera Streaming**: View live camera feeds via HLS from iPhone/smartphone
-- 🚨 **Alert System**: Automatic alerts when safety thresholds are exceeded
-- ❄️ **HVAC Control**: Smart climate control system automation
-- 📊 **Dashboard**: Modern, responsive React interface
-- 🔄 **Real-time Updates**: Auto-refresh every 30 seconds
-- 📈 **Data Analytics**: Historical data storage and analysis
+- **Real-time Monitoring**: Track temperature, humidity, CO2 levels, occupancy
+- **Live Camera Streaming**: View live camera feeds via HLS from iPhone/smartphone
+- **Alert System**: Automatic alerts when safety thresholds are exceeded
+- **HVAC Control**: Smart climate control system automation
+- **Dashboard**: Modern, responsive React interface
+- **Real-time Updates**: Auto-refresh every 30 seconds
+- **Data Analytics**: Historical data storage and analysis
 
 ### 🏗️ Sample Building Structure (FPT Telecom)
 
@@ -266,10 +266,10 @@ Stream URL: `http://localhost:8889/lobby_main/index.m3u8`
 Open browser: **http://localhost:3000**
 
 Dashboard displays:
-- 📊 Stats cards: Average temperature, occupancy, CO2, energy usage
-- 🏠 Zone cards: Real-time sensor data for each zone
-- 🚨 Active alerts: List of unacknowledged alerts
-- 📹 Live camera: Click "Show Live Camera" to view stream
+- Stats cards: Average temperature, occupancy, CO2, energy usage
+- Zone cards: Real-time sensor data for each zone
+- Active alerts: List of unacknowledged alerts
+- Live camera: Click "Show Live Camera" to view stream
 
 ### 2. Test with MQTT
 
@@ -281,11 +281,11 @@ python scripts/test_alerts.py
 ```
 
 Test script will:
-- ✅ Publish normal sensor readings
-- ⚠️ Trigger high temperature alerts (>28°C)
-- 🔥 Trigger extreme temperature alerts (>32°C)
-- 🌡️ Test multiple zones simultaneously
-- ✅ Return to normal conditions
+- Publish normal sensor readings
+- Trigger high temperature alerts (>28°C)
+- Trigger extreme temperature alerts (>32°C)
+- Test multiple zones simultaneously
+- Return to normal conditions
 
 #### Publish single message:
 
@@ -490,11 +490,11 @@ python scripts/test_alerts.py
 ```
 
 **Test scenarios:**
-- ✅ Normal conditions (no alerts)
-- ⚠️ High temperature (28-32°C)
-- 🔥 Extreme temperature (>32°C)
-- 🌊 Multiple zones rapid-fire
-- ✅ Recovery to normal
+- Normal conditions (no alerts)
+- High temperature (28-32°C)
+- Extreme temperature (>32°C)
+- Multiple zones rapid-fire
+- Recovery to normal
 
 ### 2. Test API Endpoints
 
